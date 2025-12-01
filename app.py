@@ -43,6 +43,7 @@ assistant = client.beta.assistants.create(
         * Q5. [질문 텍스트(반말)]
     ---
     """
+)
     
 # 3. 대화기록(Session State) 초기화 - 이게 없으면 새로고침 때마다 대화가 날아갑니다!
 if "messages" not in st.session_state:
@@ -73,4 +74,5 @@ if prompt := st.chat_input("무엇을 도와드릴까요?"):
 
     # (3) AI 응답 저장
     st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
+
 
