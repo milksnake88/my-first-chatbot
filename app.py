@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # 1. 환경 변수 로드 (.env 파일이 같은 폴더에 있어야 함)
 load_dotenv()
 
-st.title("🤖 나의 첫 AI 챗봇")
+st.title("🤖🌈 상상력을 펼쳐보자 🔥🐌")
 
 # 2. Azure OpenAI 클라이언트 설정
 # (실제 값은 .env 파일이나 여기에 직접 입력하세요)
@@ -60,7 +60,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # 5. 사용자 입력 받기
-if prompt := st.chat_input("무엇을 도와드릴까요?"):
+if prompt := st.chat_input("책을 읽어줘!"):
     # (1) 사용자 메시지 화면에 표시 & 저장
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -104,6 +104,7 @@ if prompt := st.chat_input("무엇을 도와드릴까요?"):
 
     # (3) AI 응답 저장
     st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
+
 
 
 
