@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import time
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 
@@ -44,10 +45,14 @@ assistant = client.beta.assistants.create(
     ---
     """
 )
-    
+
 # 3. 대화기록(Session State) 초기화 - 이게 없으면 새로고침 때마다 대화가 날아갑니다!
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "thread_id" not in st.session_state:
+    thread = client.beta.threads.create()
+    st.session_state.thread_id = thread.id
 
 # 4. 화면에 기존 대화 내용 출력
 for message in st.session_state.messages:
@@ -60,19 +65,45 @@ if prompt := st.chat_input("무엇을 도와드릴까요?"):
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
+    # 🔹 Assistants Thread에 user 메시지 추가
+    client.beta.threads.messages.create(
+        thread_id=st.session_state.thread_id,
+        role="user",
+        content=prompt,
+    )
+
     # (2) AI 응답 생성 (스트리밍 방식 아님, 단순 호출 예시)
     with st.chat_message("assistant"):
-        response = client.chat.completions.create(
-            model="gpt-4o-mini", # 사용하시는 배포명(Deployment Name)으로 수정 필요!
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ]
+        # 🔹 Assistants Run 생성
+        run = client.beta.threads.runs.create(
+            thread_id=st.session_state.thread_id,
+            assistant_id=assistant.id,
         )
-        assistant_reply = response.choices[0].message.content
+
+        # 🔹 Run 상태가 완료될 때까지 간단 폴링
+        while run.status in ["queued", "in_progress"]:
+            time.sleep(0.5)
+            run = client.beta.threads.runs.retrieve(
+                thread_id=st.session_state.thread_id,
+                run_id=run.id,
+            )
+
+        if run.status == "completed":
+            # 🔹 최신 assistant 메시지 하나만 가져오기
+            messages = client.beta.threads.messages.list(
+                thread_id=st.session_state.thread_id,
+                order="desc",
+                limit=1,
+            )
+            latest = messages.data[0]
+            assistant_reply = latest.content[0].text.value
+        else:
+            assistant_reply = f"Run이 완료되지 않았어요. 현재 상태: {run.status}"
+
         st.markdown(assistant_reply)
 
     # (3) AI 응답 저장
     st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
+
 
 
